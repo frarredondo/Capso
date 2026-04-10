@@ -1,0 +1,48 @@
+name: Feature Request
+description: Suggest a new capability or improvement for Capso
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: Describe the workflow or pain point this would address.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How you imagine this could work. Screenshots, mockups, or references to similar features in other apps are welcome.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you've considered
+      description: Other ways you've tried to solve this, or other apps that do it well.
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Which part of Capso does this touch?
+      multiple: true
+      options:
+        - Screenshots (area / window / fullscreen)
+        - Recording (video / GIF)
+        - Webcam PiP
+        - Annotation editor
+        - OCR
+        - Quick Access window
+        - Preferences / keyboard shortcuts
+        - Other / cross-cutting
+
+  - type: checkboxes
+    id: contributing
+    attributes:
+      label: Would you be willing to help build this?
+      options:
+        - label: I could open a PR for this if given some direction.

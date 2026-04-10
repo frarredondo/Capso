@@ -1,0 +1,73 @@
+name: Bug Report
+description: Report a reproducible problem in Capso
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a report! Please fill out the sections below so we can reproduce the issue quickly.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear and concise description of the bug.
+      placeholder: When I try to capture a window, the overlay freezes and...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Minimal, deterministic steps we can follow to see the bug ourselves.
+      placeholder: |
+        1. Click the menu bar icon
+        2. Choose "Capture Window"
+        3. Hover over any window
+        4. Click
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: input
+    id: capso-version
+    attributes:
+      label: Capso version
+      placeholder: e.g. 1.0.0 (from About Capso)
+    validations:
+      required: true
+
+  - type: input
+    id: macos-version
+    attributes:
+      label: macOS version
+      placeholder: e.g. 15.3 (Sequoia) / 26.0 (Tahoe)
+    validations:
+      required: true
+
+  - type: input
+    id: hardware
+    attributes:
+      label: Hardware
+      placeholder: e.g. MacBook Pro 14" (M3 Pro, 2023)
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console / crash logs
+      description: Paste any relevant output from Console.app or crash reports.
+      render: shell
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or screen recordings
+      description: Drag and drop images/videos here — or, if you can, capture the bug with Capso itself!

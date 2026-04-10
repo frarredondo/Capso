@@ -1,0 +1,51 @@
+// Packages/SharedKit/Sources/SharedKit/Utilities/FileNaming.swift
+import Foundation
+
+public enum CaptureType: Sendable {
+    case screenshot
+    case recording
+}
+
+public enum FileFormat: String, Sendable {
+    case png
+    case jpeg
+    case mp4
+    case gif
+    case mov
+}
+
+public enum FileNaming {
+    private static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f
+    }()
+
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "HH.mm.ss"
+        return f
+    }()
+
+    public static func generateName(for type: CaptureType, date: Date = Date()) -> String {
+        let prefix = switch type {
+        case .screenshot: "Capso Screenshot"
+        case .recording: "Capso Recording"
+        }
+        let dateString = dateFormatter.string(from: date)
+        let timeString = timeFormatter.string(from: date)
+        return "\(prefix) \(dateString) at \(timeString)"
+    }
+
+    public static func fileExtension(for format: FileFormat) -> String {
+        format.rawValue
+    }
+
+    public static func generateFileName(for type: CaptureType, format: FileFormat, date: Date = Date()) -> String {
+        "\(generateName(for: type, date: date)).\(fileExtension(for: format))"
+    }
+
+    public static func generateFileURL(in directory: URL, type: CaptureType, format: FileFormat, date: Date = Date()) -> URL {
+        directory.appendingPathComponent(generateFileName(for: type, format: format, date: date))
+    }
+}

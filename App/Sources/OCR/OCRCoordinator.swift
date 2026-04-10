@@ -1,0 +1,188 @@
+// App/Sources/OCR/OCRCoordinator.swift
+import AppKit
+import Observation
+import os.log
+import CaptureKit
+import OCRKit
+import SharedKit
+
+private let logger = Logger(subsystem: "com.awesomemacapps.capso", category: "OCR")
+
+private func logToFile(_ message: String) {
+    let url = FileManager.default.homeDirectoryForCurrentUser
+        .appendingPathComponent("Desktop/capso-ocr.log")
+    let timestamp = ISO8601DateFormatter().string(from: Date())
+    let line = "[\(timestamp)] \(message)\n"
+    if FileManager.default.fileExists(atPath: url.path) {
+        if let handle = try? FileHandle(forWritingTo: url) {
+            handle.seekToEndOfFile()
+            handle.write(line.data(using: .utf8)!)
+            handle.closeFile()
+        }
+    } else {
+        try? line.data(using: .utf8)?.write(to: url)
+    }
+}
+
+@MainActor
+@Observable
+final class OCRCoordinator {
+    private let settings: AppSettings
+    private var overlayWindows: [CaptureOverlayWindow] = []
+    private var onboardingWindow: OCROnboardingWindow?
+    private var ocrOverlayWindow: OCROverlayWindow?
+    private var toastWindow: ToastWindow?
+
+    init(settings: AppSettings) {
+        self.settings = settings
+    }
+
+    // MARK: - Instant OCR
+
+    func startInstantOCR() {
+        if !settings.ocrOnboardingShown {
+            showOnboarding { [weak self] in
+                self?.beginInstantOCRFlow()
+            }
+        } else {
+            beginInstantOCRFlow()
+        }
+    }
+
+    private func beginInstantOCRFlow() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+            self?.showOverlayForOCR()
+        }
+    }
+
+    private func showOverlayForOCR() {
+        dismissOverlay()
+        for screen in NSScreen.screens {
+            let overlay = CaptureOverlayWindow(screen: screen)
+            overlay.onAreaSelected = { [weak self] rect, screen in
+                self?.dismissOverlay()
+                self?.performInstantOCR(rect: rect, screen: screen)
+            }
+            overlay.onCancelled = { [weak self] in
+                self?.dismissOverlay()
+            }
+            overlay.activate(mode: .area)
+            overlayWindows.append(overlay)
+        }
+    }
+
+    private func performInstantOCR(rect: CGRect, screen: NSScreen) {
+        Task {
+            do {
+                let screenFrame = screen.frame
+                // rect is already in view-local coords (0..screenWidth, 0..screenHeight, bottom-left origin)
+                // Only flip Y for ScreenCaptureKit (top-left origin)
+                let screenRect = CGRect(
+                    x: rect.origin.x,
+                    y: screenFrame.height - rect.origin.y - rect.height,
+                    width: rect.width,
+                    height: rect.height
+                )
+                let displayID = screen.displayID
+                logToFile("performInstantOCR START")
+                logToFile("  selection rect (view-local): \(rect)")
+                logToFile("  screen.frame: \(screenFrame)")
+                logToFile("  screenRect (for SCKit): \(screenRect)")
+                logToFile("  displayID: \(displayID)")
+                let result = try await ScreenCaptureManager.captureArea(
+                    rect: screenRect,
+                    displayID: displayID
+                )
+                logToFile("  capture OK: \(result.image.width)x\(result.image.height)")
+
+                let text = try await TextRecognizer.recognizeText(
+                    image: result.image,
+                    keepLineBreaks: settings.ocrKeepLineBreaks
+                )
+                logToFile("  OCR result: \(text.count) chars")
+
+                if text.isEmpty {
+                    showToast("No text detected", icon: "info.circle.fill", iconColor: .systemYellow, screen: screen)
+                } else {
+                    let pasteboard = NSPasteboard.general
+                    pasteboard.clearContents()
+                    pasteboard.setString(text, forType: .string)
+                    showToast("Copied \(text.count) characters", screen: screen)
+                }
+            } catch {
+                logToFile("  FAILED: \(error)")
+                logToFile("  error.localizedDescription: \(error.localizedDescription)")
+                showToast("OCR: \(error.localizedDescription)", icon: "xmark.circle.fill", iconColor: .systemRed, screen: screen)
+            }
+        }
+    }
+
+    // MARK: - Visual OCR
+
+    func startVisualOCR(image: CGImage) {
+        if !settings.ocrOnboardingShown {
+            showOnboarding { [weak self] in
+                self?.beginVisualOCR(image: image)
+            }
+        } else {
+            beginVisualOCR(image: image)
+        }
+    }
+
+    private func beginVisualOCR(image: CGImage) {
+        Task {
+            do {
+                let regions = try await TextRecognizer.recognize(
+                    image: image,
+                    detectURLs: settings.ocrDetectLinks
+                )
+
+                if regions.isEmpty {
+                    showToast("No text detected", icon: "info.circle.fill", iconColor: .systemYellow)
+                    return
+                }
+
+                showOCROverlay(image: image, regions: regions)
+            } catch {
+                logger.error("Visual OCR failed: \(error.localizedDescription, privacy: .public)")
+                showToast("OCR: \(error.localizedDescription)", icon: "xmark.circle.fill", iconColor: .systemRed)
+            }
+        }
+    }
+
+    private func showOCROverlay(image: CGImage, regions: [TextRegion]) {
+        ocrOverlayWindow?.close()
+        ocrOverlayWindow = OCROverlayWindow(image: image, regions: regions)
+        ocrOverlayWindow?.onClose = { [weak self] in
+            self?.ocrOverlayWindow = nil
+        }
+        ocrOverlayWindow?.show()
+    }
+
+    // MARK: - Onboarding
+
+    private func showOnboarding(then action: @escaping () -> Void) {
+        onboardingWindow = OCROnboardingWindow(onDismiss: { [weak self] in
+            self?.settings.ocrOnboardingShown = true
+            self?.onboardingWindow?.close()
+            self?.onboardingWindow = nil
+            action()
+        })
+        onboardingWindow?.show()
+    }
+
+    // MARK: - Helpers
+
+    private func dismissOverlay() {
+        for window in overlayWindows {
+            window.deactivate()
+        }
+        overlayWindows.removeAll()
+    }
+
+    private func showToast(_ message: String, icon: String = "checkmark.circle.fill", iconColor: NSColor = .systemGreen, screen: NSScreen? = nil) {
+        toastWindow?.orderOut(nil)
+        toastWindow = ToastWindow(message: message, icon: icon, iconColor: iconColor, screen: screen)
+        toastWindow?.show()
+    }
+}

@@ -184,13 +184,6 @@ swift test --package-path Packages/AnnotationKit
 
 ## 路线图
 
-### 已发布（v0.1.1）
-上面列出的所有功能。
-
-### v0.1.0
-首次发布。
-
-### 计划中
 - 聚光灯、放大镜、标尺、图片叠加等标注工具
 - 截图历史浏览器
 - 视频剪辑编辑器
@@ -200,7 +193,7 @@ swift test --package-path Packages/AnnotationKit
 - URL Scheme API
 - Raycast / 快捷指令集成
 
-查看 [Issues](https://github.com/lzhgus/Capso/issues) 了解当前进展，非常欢迎 PR 和建议！
+查看 [Issues](https://github.com/lzhgus/Capso/issues) 了解当前进展，查看 [GitHub Releases](https://github.com/lzhgus/Capso/releases) 了解版本历史。非常欢迎 PR 和建议！
 
 ---
 

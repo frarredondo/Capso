@@ -187,13 +187,6 @@ The package split means you can embed, for example, `CaptureKit` or `AnnotationK
 
 ## Roadmap
 
-### Shipped (v0.1.1)
-Everything listed in Features above.
-
-### v0.1.0
-Initial release.
-
-### Planned
 - Spotlight, magnifier, ruler, image overlay annotation tools
 - Screenshot history browser
 - Video trimmer/editor
@@ -203,7 +196,7 @@ Initial release.
 - URL scheme API for automation
 - Raycast / Shortcuts integration
 
-See [open issues](https://github.com/lzhgus/Capso/issues) for current priorities. Contributions welcome!
+See [open issues](https://github.com/lzhgus/Capso/issues) for current priorities and [GitHub Releases](https://github.com/lzhgus/Capso/releases) for version history. Contributions welcome!
 
 ---
 

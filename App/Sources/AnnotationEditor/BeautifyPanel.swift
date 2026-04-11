@@ -18,14 +18,13 @@ struct BeautifyPanel: View {
     ]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             Toggle("Enable background", isOn: $settings.isEnabled)
 
             if settings.isEnabled {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(spacing: 8) {
-                        Text("Style")
-                            .frame(width: 90, alignment: .leading)
+                VStack(alignment: .leading, spacing: 8) {
+                    // -- Appearance --
+                    settingRow("Style") {
                         Picker("", selection: $settings.backgroundStyle) {
                             ForEach(BeautifyBackgroundStyle.allCases) { style in
                                 Text(style.label).tag(style)
@@ -34,24 +33,13 @@ struct BeautifyPanel: View {
                         .pickerStyle(.segmented)
                         .labelsHidden()
                         .fixedSize()
-                        Spacer()
                     }
 
                     if settings.backgroundStyle == .solid {
-                        HStack(spacing: 8) {
-                            Text("Background")
-                                .frame(width: 90, alignment: .leading)
-                            HStack(spacing: 6) {
+                        settingRow("Background") {
+                            HStack(spacing: 4) {
                                 ForEach(Array(presetColors.enumerated()), id: \.offset) { _, color in
-                                    Button {
-                                        settings.backgroundColor = color
-                                    } label: {
-                                        Circle()
-                                            .fill(color)
-                                            .frame(width: 18, height: 18)
-                                            .overlay(Circle().stroke(Color.black.opacity(0.15), lineWidth: 0.5))
-                                    }
-                                    .buttonStyle(.plain)
+                                    colorSwatch(color)
                                 }
                                 ColorPicker("", selection: $settings.backgroundColor, supportsOpacity: false)
                                     .labelsHidden()
@@ -59,38 +47,100 @@ struct BeautifyPanel: View {
                         }
                     }
 
-                    HStack(spacing: 8) {
-                        Text("Padding")
-                            .frame(width: 90, alignment: .leading)
-                        Slider(value: $settings.padding, in: 16...80, step: 1)
-                        Text("\(Int(settings.padding))")
-                            .font(.system(size: 11, design: .monospaced))
-                            .frame(width: 32, alignment: .trailing)
-                    }
+                    Divider()
+                        .padding(.vertical, 1)
 
-                    HStack(spacing: 8) {
-                        Text("Corners")
-                            .frame(width: 90, alignment: .leading)
-                        Slider(value: $settings.cornerRadius, in: 0...24, step: 1)
-                        Text("\(Int(settings.cornerRadius))")
-                            .font(.system(size: 11, design: .monospaced))
-                            .frame(width: 32, alignment: .trailing)
-                    }
+                    // -- Dimensions --
+                    sliderRow("Padding", value: $settings.padding, range: 16...80)
+                    sliderRow("Corners", value: $settings.cornerRadius, range: 0...24)
 
+                    Divider()
+                        .padding(.vertical, 1)
+
+                    // -- Shadow --
                     HStack(spacing: 8) {
-                        Toggle("Shadow", isOn: $settings.shadowEnabled)
-                            .frame(width: 90, alignment: .leading)
+                        Toggle(isOn: $settings.shadowEnabled) {
+                            Text("Shadow")
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(width: 80, alignment: .leading)
+
                         Slider(value: $settings.shadowRadius, in: 0...40, step: 1)
                             .disabled(!settings.shadowEnabled)
-                        Text("\(Int(settings.shadowRadius))")
-                            .font(.system(size: 11, design: .monospaced))
-                            .frame(width: 32, alignment: .trailing)
+
+                        valueLabel(Int(settings.shadowRadius))
                     }
+                    .opacity(settings.shadowEnabled ? 1 : 0.55)
+                    .animation(.easeInOut(duration: 0.15), value: settings.shadowEnabled)
                 }
             }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(.bar)
+        .animation(.easeInOut(duration: 0.2), value: settings.isEnabled)
+        .animation(.easeInOut(duration: 0.15), value: settings.backgroundStyle)
+    }
+
+    // MARK: - Reusable Components
+
+    private func settingRow<Content: View>(
+        _ title: LocalizedStringKey,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        HStack(spacing: 8) {
+            Text(title)
+                .foregroundStyle(.secondary)
+                .frame(width: 80, alignment: .leading)
+            content()
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func sliderRow(
+        _ title: LocalizedStringKey,
+        value: Binding<CGFloat>,
+        range: ClosedRange<CGFloat>
+    ) -> some View {
+        HStack(spacing: 8) {
+            Text(title)
+                .foregroundStyle(.secondary)
+                .frame(width: 80, alignment: .leading)
+            Slider(value: value, in: range, step: 1)
+            valueLabel(Int(value.wrappedValue))
+        }
+    }
+
+    private func valueLabel(_ value: Int) -> some View {
+        Text("\(value)")
+            .font(.system(size: 11, weight: .medium, design: .monospaced))
+            .foregroundStyle(.tertiary)
+            .frame(width: 28, alignment: .trailing)
+    }
+
+    private func colorSwatch(_ color: Color) -> some View {
+        let selected = isColorMatch(color, settings.backgroundColor)
+        return Button {
+            settings.backgroundColor = color
+        } label: {
+            Circle()
+                .fill(color)
+                .frame(width: 18, height: 18)
+                .overlay(Circle().strokeBorder(Color.primary.opacity(0.12), lineWidth: 0.5))
+                .padding(2)
+                .overlay(
+                    Circle()
+                        .strokeBorder(Color.accentColor, lineWidth: selected ? 1.5 : 0)
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func isColorMatch(_ a: Color, _ b: Color) -> Bool {
+        guard let c1 = NSColor(a).usingColorSpace(.sRGB),
+              let c2 = NSColor(b).usingColorSpace(.sRGB) else { return false }
+        return abs(c1.redComponent - c2.redComponent) < 0.02
+            && abs(c1.greenComponent - c2.greenComponent) < 0.02
+            && abs(c1.blueComponent - c2.blueComponent) < 0.02
     }
 }

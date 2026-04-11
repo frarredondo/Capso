@@ -30,6 +30,13 @@
 
 从 [**GitHub Releases →**](https://github.com/lzhgus/Capso/releases/latest) 下载最新的签名公证版 DMG，开箱即用。
 
+或通过 Homebrew 安装：
+
+```bash
+brew tap lzhgus/tap
+brew install --cask capso
+```
+
 也可以[从源码构建](#从源码构建)。
 
 > 首次使用时需要授予屏幕录制、摄像头和麦克风权限，App 会自动弹窗引导。

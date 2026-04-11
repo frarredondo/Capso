@@ -30,10 +30,12 @@ A native, feature-rich alternative to CleanShot X. Built with Swift 6.0 and Swif
 
 Grab the latest signed, notarized DMG from [**GitHub Releases →**](https://github.com/lzhgus/Capso/releases/latest)
 
-<!-- TODO: Add Homebrew cask once submitted -->
-<!-- ```bash -->
-<!-- brew install --cask capso -->
-<!-- ``` -->
+Or install via Homebrew:
+
+```bash
+brew tap lzhgus/tap
+brew install --cask capso
+```
 
 Or [build from source](#build-from-source).
 

@@ -1,6 +1,7 @@
 // App/Sources/AnnotationEditor/AnnotationEditorView.swift
 import SwiftUI
 import AnnotationKit
+import OCRKit
 
 struct AnnotationEditorView: View {
     let sourceImage: CGImage
@@ -21,6 +22,8 @@ struct AnnotationEditorView: View {
     @State private var showBeautifyPanel = false
     @State private var refreshTrigger = 0
     @State private var zoomScale: CGFloat = 1.0
+    /// Cached text line bounding boxes for smart highlighter snapping.
+    @State private var textRegions: [CGRect] = []
 
     private var imageWidth: CGFloat { CGFloat(sourceImage.width) }
     private var imageHeight: CGFloat { CGFloat(sourceImage.height) }
@@ -117,6 +120,7 @@ struct AnnotationEditorView: View {
                             currentStyle: currentStyle,
                             zoomScale: zoomScale,
                             refreshTrigger: refreshTrigger,
+                            textRegions: textRegions,
                             onSwitchToSelect: {
                                 document.clearSelection()
                                 currentTool = .select
@@ -142,6 +146,14 @@ struct AnnotationEditorView: View {
                 .background(Color(white: 0.12))
                 .onAppear {
                     fitToWindow(availableSize: geo.size)
+                    // Pre-cache text regions for smart highlighter snapping
+                    Task {
+                        if let regions = try? await TextRecognizer.recognize(
+                            image: sourceImage, level: .fast, detectURLs: false
+                        ) {
+                            textRegions = regions.map(\.boundingBox)
+                        }
+                    }
                 }
                 .onChange(of: currentTool) { oldTool, newTool in
                     // Clear selection so restoring lineWidth below doesn't

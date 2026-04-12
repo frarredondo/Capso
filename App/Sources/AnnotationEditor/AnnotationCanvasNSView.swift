@@ -30,6 +30,11 @@ final class AnnotationCanvasNSView: NSView {
     /// fontSize from this original value — not the live one, which drifts each tick.
     private var resizeOriginalTextFontSize: CGFloat?
     private var activeFreehand: FreehandObject?
+    /// Cached text regions from OCR for smart highlighter snapping.
+    var textRegions: [CGRect] = []
+    /// When the highlighter starts on a text line, stores the line's
+    /// bounding box so the stroke is constrained to a horizontal band.
+    private var highlighterSnapRect: CGRect?
 
     private let handleRadius: CGFloat = 5  // in image coords (adjusted by zoom in drawing)
 
@@ -273,7 +278,25 @@ final class AnnotationCanvasNSView: NSView {
                 dragObjectID = nil
             }
         } else if currentTool == .freehand || currentTool == .highlighter {
-            activeFreehand = FreehandObject(points: [point], style: currentStyle)
+            // Smart highlighter: if starting on a text line, snap to it.
+            highlighterSnapRect = nil
+            if currentTool == .highlighter {
+                // Use a slightly expanded region for easier hit detection
+                for region in textRegions {
+                    let expanded = region.insetBy(dx: 0, dy: -region.height * 0.3)
+                    if expanded.contains(point) {
+                        highlighterSnapRect = region
+                        break
+                    }
+                }
+            }
+            if let snap = highlighterSnapRect {
+                let snappedY = snap.midY
+                let snappedPoint = CGPoint(x: point.x, y: snappedY)
+                activeFreehand = FreehandObject(points: [snappedPoint], style: currentStyle)
+            } else {
+                activeFreehand = FreehandObject(points: [point], style: currentStyle)
+            }
         }
 
         needsDisplay = true
@@ -296,7 +319,13 @@ final class AnnotationCanvasNSView: NSView {
                 dragStart = point
             }
         } else if currentTool == .freehand || currentTool == .highlighter {
-            activeFreehand?.addPoint(point)
+            if let snap = highlighterSnapRect {
+                // Constrain to horizontal line at the text's vertical center
+                let snappedPoint = CGPoint(x: point.x, y: snap.midY)
+                activeFreehand?.addPoint(snappedPoint)
+            } else {
+                activeFreehand?.addPoint(point)
+            }
         }
 
         needsDisplay = true
@@ -434,10 +463,11 @@ final class AnnotationCanvasNSView: NSView {
                     doc.addObject(TextObject(text: input.stringValue, origin: end, style: currentStyle))
                 }
             case .freehand, .highlighter:
-                if let freehand = activeFreehand, freehand.points.count > 2 {
+                if let freehand = activeFreehand, freehand.points.count > 1 {
                     doc.addObject(freehand)
                 }
                 activeFreehand = nil
+                highlighterSnapRect = nil
             case .pixelate:
                 let rect = CGRect(x: min(start.x, end.x), y: min(start.y, end.y),
                                   width: abs(end.x - start.x), height: abs(end.y - start.y))

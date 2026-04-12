@@ -10,6 +10,7 @@ struct AnnotationCanvasView: NSViewRepresentable {
     let currentStyle: AnnotationKit.StrokeStyle
     let zoomScale: CGFloat
     let refreshTrigger: Int
+    var textRegions: [CGRect] = []
     var onSwitchToSelect: (() -> Void)?
 
     func makeNSView(context: Context) -> AnnotationCanvasNSView {
@@ -19,6 +20,7 @@ struct AnnotationCanvasView: NSViewRepresentable {
         view.currentTool = currentTool
         view.currentStyle = currentStyle
         view.zoomScale = zoomScale
+        view.textRegions = textRegions
         view.onObjectCreated = {
             // Continuous-drawing tools stay active after each stroke;
             // one-shot tools (arrow, rect, ellipse, text, pixelate) switch
@@ -36,6 +38,7 @@ struct AnnotationCanvasView: NSViewRepresentable {
         nsView.currentTool = currentTool
         nsView.currentStyle = currentStyle
         nsView.zoomScale = zoomScale
+        nsView.textRegions = textRegions
         nsView.onObjectCreated = {
             let keepActive: Set<AnnotationTool> = [.counter, .freehand, .highlighter]
             if !keepActive.contains(currentTool) {

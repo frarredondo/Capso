@@ -20,7 +20,11 @@ struct AnnotationCanvasView: NSViewRepresentable {
         view.currentStyle = currentStyle
         view.zoomScale = zoomScale
         view.onObjectCreated = {
-            if currentTool != .counter {
+            // Continuous-drawing tools stay active after each stroke;
+            // one-shot tools (arrow, rect, ellipse, text, pixelate) switch
+            // back to select after creation.
+            let keepActive: Set<AnnotationTool> = [.counter, .freehand, .highlighter]
+            if !keepActive.contains(currentTool) {
                 onSwitchToSelect?()
             }
         }
@@ -33,7 +37,8 @@ struct AnnotationCanvasView: NSViewRepresentable {
         nsView.currentStyle = currentStyle
         nsView.zoomScale = zoomScale
         nsView.onObjectCreated = {
-            if currentTool != .counter {
+            let keepActive: Set<AnnotationTool> = [.counter, .freehand, .highlighter]
+            if !keepActive.contains(currentTool) {
                 onSwitchToSelect?()
             }
         }

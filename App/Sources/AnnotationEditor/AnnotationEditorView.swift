@@ -117,7 +117,10 @@ struct AnnotationEditorView: View {
                             currentStyle: currentStyle,
                             zoomScale: zoomScale,
                             refreshTrigger: refreshTrigger,
-                            onSwitchToSelect: { currentTool = .select }
+                            onSwitchToSelect: {
+                                document.clearSelection()
+                                currentTool = .select
+                            }
                         )
                         .frame(
                             width: imageWidth * zoomScale,
@@ -141,6 +144,10 @@ struct AnnotationEditorView: View {
                     fitToWindow(availableSize: geo.size)
                 }
                 .onChange(of: currentTool) { oldTool, newTool in
+                    // Clear selection so restoring lineWidth below doesn't
+                    // overwrite the previously drawn object's style.
+                    document.clearSelection()
+
                     // Save outgoing tool's value
                     switch oldTool {
                     case .pixelate: savedBlockSize = lineWidth

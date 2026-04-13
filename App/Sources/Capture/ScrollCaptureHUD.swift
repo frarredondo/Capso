@@ -197,8 +197,10 @@ final class ScrollCaptureBorderView: NSView {
     override init(frame: NSRect) {
         super.init(frame: frame)
         animTimer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: true) { [weak self] _ in
-            self?.dashPhase += 2
-            self?.needsDisplay = true
+            Task { @MainActor in
+                self?.dashPhase += 2
+                self?.needsDisplay = true
+            }
         }
     }
 

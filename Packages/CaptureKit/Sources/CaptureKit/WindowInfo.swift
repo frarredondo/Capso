@@ -11,8 +11,10 @@ public struct WindowInfo: Identifiable, Sendable {
     public let windowLayer: Int
 
     public init(from scWindow: SCWindow) {
+        let trimmedTitle = scWindow.title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let fallbackTitle = scWindow.owningApplication?.applicationName ?? "Untitled Window"
         self.id = scWindow.windowID
-        self.title = scWindow.title ?? ""
+        self.title = trimmedTitle.isEmpty ? fallbackTitle : trimmedTitle
         self.appName = scWindow.owningApplication?.applicationName ?? ""
         self.frame = scWindow.frame
         self.isOnScreen = scWindow.isOnScreen
@@ -37,16 +39,20 @@ public struct DisplayInfo: Identifiable, Sendable {
 public enum ContentEnumerator {
     public static func windows() async throws -> [WindowInfo] {
         let content = try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: true)
+        let myBundleID = Bundle.main.bundleIdentifier
         return content.windows
             .filter { window in
-                // Only include normal application windows (layer 0).
-                // Status bar items, floating panels, overlays, etc. have layer > 0.
-                window.windowLayer == 0
-                && window.frame.width > 100 && window.frame.height > 50
-                && window.isOnScreen
-                && window.owningApplication != nil
-                && window.title != nil
-                && !window.title!.isEmpty
+                let trimmedTitle = window.title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                let appName = window.owningApplication?.applicationName ?? ""
+                let hasUsableLabel = !trimmedTitle.isEmpty || !appName.isEmpty
+                let isOwnAppWindow = window.owningApplication?.bundleIdentifier == myBundleID
+
+                return window.frame.width > 100
+                    && window.frame.height > 50
+                    && window.isOnScreen
+                    && window.owningApplication != nil
+                    && hasUsableLabel
+                    && (window.windowLayer == 0 || isOwnAppWindow)
             }
             .map { WindowInfo(from: $0) }
     }

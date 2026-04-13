@@ -379,7 +379,11 @@ final class CaptureOverlayView: NSView {
             if let window = windowUnderCursor(at: screenPoint) {
                 hoveredWindowID = window.id
                 hoveredWindowFrame = window.frame
-                hoveredWindowName = "\(window.appName) — \(window.title)"
+                if window.appName.isEmpty || window.title == window.appName {
+                    hoveredWindowName = window.title
+                } else {
+                    hoveredWindowName = "\(window.appName) — \(window.title)"
+                }
             } else {
                 hoveredWindowID = nil
             }

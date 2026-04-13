@@ -109,22 +109,16 @@ final class CaptureOverlayView: NSView {
     }
 
     private func drawAreaMode(in context: CGContext) {
-        // This overlay is transparent. In freeze-screen mode, an opaque
-        // window below shows the frozen image. This overlay only draws
-        // the crosshair, dark tint, and selection border.
+        // The overlay is fully transparent. Nothing outside the selection
+        // changes — no dark tint, no visual disruption. Only the selection
+        // area gets a subtle white highlight to indicate what's being captured.
 
         if isDragging {
             let selectionRect = self.selectionRect
 
-            // Dark overlay on entire screen
-            context.setFillColor(overlayColor.cgColor)
-            context.fill(bounds)
-
-            // Clear the selection area to show what's below
-            // (either the frozen image window or the live desktop)
-            context.setBlendMode(.clear)
+            // Subtle white highlight inside the selection area
+            context.setFillColor(NSColor.white.withAlphaComponent(0.08).cgColor)
             context.fill(selectionRect)
-            context.setBlendMode(.normal)
 
             // Selection border
             context.setStrokeColor(selectionBorderColor.cgColor)

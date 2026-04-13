@@ -123,14 +123,13 @@ final class CaptureCoordinator {
         }
     }
 
-    /// Two-window freeze architecture (same as CleanShot X's FSWindow + FSOverlay):
+    /// Two-window freeze architecture for preserving popups/dropdowns:
     ///
     /// 1. Bottom window: OPAQUE, shows frozen image, completely replaces the
     ///    live desktop. isOpaque=true means no compositing with what's behind
     ///    → no sub-pixel mismatch → no shaking. Pre-rendered before showing.
     ///
     /// 2. Top window: TRANSPARENT overlay for crosshair + selection + dark tint.
-    ///    Drawn on top of the frozen window, not on the live desktop.
     private func showFrozenOverlay() {
         dismissOverlay()
 
@@ -679,9 +678,9 @@ final class CaptureCoordinator {
     // MARK: - Synchronous Display Capture
 
     /// Synchronously capture a display using CGDisplayCreateImage.
-    /// This is the same API used by CleanShot X and Shottr for freeze-screen.
-    /// It's deprecated in macOS 14+ but still functional — loaded via dlsym
+    /// Deprecated in macOS 14+ but still functional — loaded via dlsym
     /// to bypass the compile-time unavailability annotation.
+    /// Required for freeze-screen: must capture before any window appears.
     private static func syncCaptureDisplay(_ displayID: CGDirectDisplayID) -> CGImage? {
         typealias CGDisplayCreateImageFunc = @convention(c) (CGDirectDisplayID) -> CGImage?
         guard let handle = dlopen("/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics", RTLD_LAZY),

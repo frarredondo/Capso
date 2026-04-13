@@ -74,13 +74,11 @@ public final class ScrollCaptureController: @unchecked Sendable {
     ) async -> CGImage? {
         // Capture initial frame
         guard let firstFrame = await captureFrame() else {
-            print("[ScrollCapture] Failed to capture initial frame")
             return nil
         }
         stitcher.setInitialFrame(firstFrame)
         shotA = firstFrame
         frameCount = 1
-        print("[ScrollCapture] Initial frame: \(firstFrame.width)x\(firstFrame.height)")
 
         onProgress(ScrollCaptureProgress(
             currentHeight: stitcher.totalHeight,
@@ -95,7 +93,6 @@ public final class ScrollCaptureController: @unchecked Sendable {
         // Main capture loop — runs until user clicks Done or stop condition
         captureLoop: while !isCancelled {
             if stitcher.totalHeight >= config.maxHeight {
-                print("[ScrollCapture] Max height reached: \(stitcher.totalHeight)")
                 break
             }
 
@@ -126,7 +123,6 @@ public final class ScrollCaptureController: @unchecked Sendable {
             let offset = detectOffset(imageA: shotA!, imageB: shotB)
 
             if offset == nil {
-                print("[ScrollCapture] Vision failed to detect offset")
                 consecutiveFailures += 1
                 if consecutiveFailures >= 15 { break captureLoop }
                 // Still update shotA so next comparison is fresh
@@ -136,7 +132,6 @@ public final class ScrollCaptureController: @unchecked Sendable {
 
             let rawOffset = offset!
             let absOffset = abs(rawOffset)
-            print("[ScrollCapture] Vision offset: \(rawOffset) (abs: \(absOffset))")
 
             // Too small offset = noise, not a real scroll
             if absOffset < 3 {
@@ -149,7 +144,6 @@ public final class ScrollCaptureController: @unchecked Sendable {
             let sign = rawOffset > 0 ? 1 : -1
             if let first = firstOffsetSign {
                 if sign != first {
-                    print("[ScrollCapture] Direction reversed — end of content")
                     break captureLoop
                 }
             } else {
@@ -164,7 +158,6 @@ public final class ScrollCaptureController: @unchecked Sendable {
                 consecutiveNoChange = 0
                 consecutiveFailures = 0
                 frameCount += 1
-                print("[ScrollCapture] Stitched \(rows) new rows, total: \(stitcher.totalHeight)px, frames: \(frameCount)")
                 onProgress(ScrollCaptureProgress(
                     currentHeight: stitcher.totalHeight,
                     maxHeight: config.maxHeight,
@@ -173,16 +166,13 @@ public final class ScrollCaptureController: @unchecked Sendable {
 
             case .noChange:
                 consecutiveNoChange += 1
-                print("[ScrollCapture] Stitch: no change (\(consecutiveNoChange)/10)")
                 if consecutiveNoChange >= 10 { break captureLoop }
 
             case .reversedScroll:
-                print("[ScrollCapture] Stitch: reversed scroll")
                 break captureLoop
 
             case .alignmentFailed:
                 consecutiveFailures += 1
-                print("[ScrollCapture] Stitch: alignment failed (\(consecutiveFailures)/15)")
                 if consecutiveFailures >= 15 { break captureLoop }
             }
 
@@ -190,7 +180,6 @@ public final class ScrollCaptureController: @unchecked Sendable {
             shotA = shotB
         }
 
-        print("[ScrollCapture] Finished. Total: \(stitcher.totalHeight)px, \(frameCount) frames")
         return stitcher.mergedImage
     }
 
@@ -236,7 +225,6 @@ public final class ScrollCaptureController: @unchecked Sendable {
                 configuration: cfg
             )
         } catch {
-            print("[ScrollCapture] Capture error: \(error)")
             return nil
         }
     }
@@ -252,7 +240,6 @@ public final class ScrollCaptureController: @unchecked Sendable {
         do {
             try handler.perform([request])
         } catch {
-            print("[ScrollCapture] Vision error: \(error)")
             return nil
         }
 

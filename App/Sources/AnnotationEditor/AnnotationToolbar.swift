@@ -138,15 +138,30 @@ struct AnnotationToolbar: View {
     }
 
     private var actionGroup: some View {
-        HStack(spacing: 8) {
-            Button("Cancel", action: onCancel)
-                .keyboardShortcut(.escape, modifiers: [])
-            Button("Copy", action: onCopy)
-                .keyboardShortcut("c", modifiers: .command)
-            Button("Save", action: onSave)
-                .keyboardShortcut("s", modifiers: .command)
-                .buttonStyle(.borderedProminent)
+        HStack(spacing: 6) {
+            Button(action: onCancel) {
+                Label("Close", systemImage: "xmark")
+                    .font(.system(size: 12, weight: .medium))
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .keyboardShortcut(.escape, modifiers: [])
+
+            Button(action: onCopy) {
+                Label("Copy", systemImage: "doc.on.doc")
+                    .font(.system(size: 12, weight: .medium))
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .keyboardShortcut("c", modifiers: .command)
+
+            Button(action: onSave) {
+                Label("Save", systemImage: "square.and.arrow.down")
+                    .font(.system(size: 12, weight: .medium))
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.small)
+            .keyboardShortcut("s", modifiers: .command)
         }
-        .controlSize(.small)
     }
 }

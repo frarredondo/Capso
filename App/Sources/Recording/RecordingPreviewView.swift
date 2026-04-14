@@ -10,6 +10,7 @@ import Observation
 final class RecordingPreviewState {
     var isSaving: Bool = false
     var saveProgress: Double = 0
+    var progressLabel: String = String(localized: "Saving…")
 }
 
 struct RecordingPreviewView: View {
@@ -104,7 +105,7 @@ struct RecordingPreviewView: View {
                 .progressViewStyle(.linear)
                 .controlSize(.small)
                 .tint(.accentColor)
-            Text("Saving… \(Int(state.saveProgress * 100))%")
+            Text("\(state.progressLabel) \(Int(state.saveProgress * 100))%")
                 .font(.system(size: 11, weight: .medium, design: .monospaced))
                 .foregroundStyle(.secondary)
                 .monospacedDigit()

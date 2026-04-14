@@ -442,15 +442,22 @@ final class RecordingCoordinator {
     private func exportRecording(
         _ tempURL: URL,
         format: RecordingKit.RecordingFormat,
+        destinationOverride: URL? = nil,
+        deleteSourceOnSuccess: Bool = true,
         progress: (@Sendable (Double) -> Void)? = nil
     ) async -> URL? {
-        let exportDir = settings.exportLocation
-        try? FileManager.default.createDirectory(at: exportDir, withIntermediateDirectories: true)
-
         let exportFormat: ExportFormat = format == .gif ? .gif : .mp4
         let fileFormat: FileFormat = format == .gif ? .gif : .mp4
-        let fileName = FileNaming.generateFileName(for: .recording, format: fileFormat)
-        let destURL = exportDir.appendingPathComponent(fileName)
+        let destURL: URL
+        if let destinationOverride {
+            destURL = destinationOverride
+        } else {
+            let exportDir = settings.exportLocation
+            let fileName = FileNaming.generateFileName(for: .recording, format: fileFormat)
+            destURL = exportDir.appendingPathComponent(fileName)
+        }
+        let exportDir = destURL.deletingLastPathComponent()
+        try? FileManager.default.createDirectory(at: exportDir, withIntermediateDirectories: true)
 
         let options = ExportOptions(
             format: exportFormat,
@@ -460,8 +467,10 @@ final class RecordingCoordinator {
 
         do {
             let result = try await VideoExporter.export(source: tempURL, options: options, progress: progress)
-            // Clean up temp file after successful export
-            try? FileManager.default.removeItem(at: tempURL)
+            if deleteSourceOnSuccess {
+                // Clean up temp file after successful export
+                try? FileManager.default.removeItem(at: tempURL)
+            }
             return result
         } catch {
             // Use NSLog so the error is visible in Console.app — `print` only
@@ -483,6 +492,16 @@ final class RecordingCoordinator {
         alert.runModal()
     }
 
+    private func showRecordingCopyFailureAlert(format: RecordingKit.RecordingFormat) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = String(localized: "Couldn't copy recording")
+        let kind = format == .gif ? String(localized: "GIF") : String(localized: "video")
+        alert.informativeText = String(localized: "Copying the \(kind) to the clipboard failed. The recording is still available in the preview — close this dialog and try Copy again, or use Save.")
+        alert.addButton(withTitle: String(localized: "OK"))
+        alert.runModal()
+    }
+
     private func showRecordingPreview(thumbnail: NSImage?, duration: String, fileSize: String,
                                       tempURL: URL, format: RecordingKit.RecordingFormat) {
         recordingPreviewWindow?.close()
@@ -494,15 +513,35 @@ final class RecordingCoordinator {
             state: state, settings: settings
         )
 
-        window.onCopy = { [weak self] in
+        window.onCopy = { [weak self, weak window] in
             // Ignore Copy if a save is already running — same reason we
             // disable the buttons in the view (avoid double-write races).
             guard !state.isSaving else { return }
-            // Copy temp file to clipboard
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.writeObjects([tempURL as NSURL])
-            self?.recordingPreviewWindow?.close()
-            self?.recordingPreviewWindow = nil
+            guard let self else { return }
+            state.isSaving = true
+            state.saveProgress = 0
+            state.progressLabel = String(localized: "Copying…")
+            window?.cancelAutoDismissForSave()
+
+            Task { @MainActor in
+                let clipboardURL = await self.exportRecordingToClipboard(tempURL, format: format) { progress in
+                    Task { @MainActor in
+                        state.saveProgress = progress
+                    }
+                }
+
+                if let clipboardURL {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.writeObjects([clipboardURL as NSURL])
+                    self.recordingPreviewWindow?.close()
+                    self.recordingPreviewWindow = nil
+                } else {
+                    state.isSaving = false
+                    state.saveProgress = 0
+                    state.progressLabel = String(localized: "Saving…")
+                    self.showRecordingCopyFailureAlert(format: format)
+                }
+            }
         }
 
         window.onSave = { [weak self, weak window] in
@@ -513,6 +552,7 @@ final class RecordingCoordinator {
             guard !state.isSaving else { return }
             state.isSaving = true
             state.saveProgress = 0
+            state.progressLabel = String(localized: "Saving…")
             window?.cancelAutoDismissForSave()
 
             Task { @MainActor in
@@ -547,6 +587,25 @@ final class RecordingCoordinator {
 
         window.show()
         recordingPreviewWindow = window
+    }
+
+    private func exportRecordingToClipboard(
+        _ tempURL: URL,
+        format: RecordingKit.RecordingFormat,
+        progress: (@Sendable (Double) -> Void)? = nil
+    ) async -> URL? {
+        let fileFormat: FileFormat = format == .gif ? .gif : .mp4
+        let clipboardDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("capso-clipboard-exports", isDirectory: true)
+        let destinationURL = clipboardDir
+            .appendingPathComponent("capso_clipboard_\(UUID().uuidString).\(FileNaming.fileExtension(for: fileFormat))")
+
+        return await exportRecording(
+            tempURL,
+            format: format,
+            destinationOverride: destinationURL,
+            progress: progress
+        )
     }
 
     // MARK: - UI Helpers

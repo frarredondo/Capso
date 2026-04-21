@@ -42,6 +42,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         registerGlobalShortcuts()
         historyCoordinator?.runCleanup()
 
+        // Safety net: if the menu bar icon is hidden, the user has no obvious
+        // way to access settings, so surface Preferences on launch.
+        if !settings.showMenuBarIcon {
+            DispatchQueue.main.async { [weak self] in
+                self?.showPreferences()
+            }
+        }
+
         NotificationCenter.default.addObserver(
             forName: .openScreenshotSettings,
             object: nil,
@@ -103,6 +111,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
+    }
+
+    /// Called when the user double-clicks the app while it's already running
+    /// (Spotlight, Launchpad, Finder). For an LSUIElement app with the menu
+    /// bar icon hidden, this is the user's only way back into Preferences.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !settings.showMenuBarIcon {
+            showPreferences()
+        }
+        return true
     }
 
     func showPreferences() {

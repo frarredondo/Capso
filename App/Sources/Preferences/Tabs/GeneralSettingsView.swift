@@ -2,10 +2,25 @@
 import SwiftUI
 import LaunchAtLogin
 import AppKit
+import KeyboardShortcuts
 
 struct GeneralSettingsView: View {
     @Bindable var viewModel: PreferencesViewModel
     let updateManager: UpdateManager?
+    @State private var showHideMenuBarConfirmation = false
+
+    private var menuBarToggleBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.showMenuBarIcon },
+            set: { newValue in
+                if newValue {
+                    viewModel.showMenuBarIcon = true
+                } else {
+                    showHideMenuBarConfirmation = true
+                }
+            }
+        )
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -19,16 +34,11 @@ struct GeneralSettingsView: View {
                             .toggleStyle(.switch)
                             .controlSize(.small)
                     }
-                    // TODO: Re-enable "Show Menu Bar Icon" once MenuBarController
-                    // actually respects AppSettings.showMenuBarIcon. Today it
-                    // unconditionally installs the status item in
-                    // setupStatusItem(), so this toggle did nothing when flipped.
-                    // Uncomment the SettingRow below when the feature is wired.
-                    // SettingRow(label: "Show Menu Bar Icon", showDivider: true) {
-                    //     Toggle("", isOn: $viewModel.showMenuBarIcon)
-                    //         .toggleStyle(.switch)
-                    //         .controlSize(.small)
-                    // }
+                    SettingRow(label: "Show Menu Bar Icon", sublabel: "Hide for a minimalist menu bar — shortcuts still work", showDivider: true) {
+                        Toggle("", isOn: menuBarToggleBinding)
+                            .toggleStyle(.switch)
+                            .controlSize(.small)
+                    }
                 }
             }
 
@@ -97,6 +107,29 @@ struct GeneralSettingsView: View {
                 }
             }
         }
+        .alert("Hide menu bar icon?", isPresented: $showHideMenuBarConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Hide Icon", role: .destructive) {
+                viewModel.showMenuBarIcon = false
+            }
+        } message: {
+            Text(hideMenuBarMessage)
+        }
+    }
+
+    private var hideMenuBarMessage: String {
+        let captureArea = shortcutDescription(for: .captureArea) ?? String(localized: "not set")
+        let recordScreen = shortcutDescription(for: .recordScreen) ?? String(localized: "not set")
+        let history = shortcutDescription(for: .screenshotHistory) ?? String(localized: "not set")
+        return String(
+            format: String(localized: "Capso will keep running, and your global shortcuts still work:\n\n• Capture Area: %@\n• Record Screen: %@\n• Screenshot History: %@\n\nTo open Preferences again, launch Capso from Spotlight, Launchpad, or Finder — even while it's still running."),
+            captureArea, recordScreen, history
+        )
+    }
+
+    private func shortcutDescription(for name: KeyboardShortcuts.Name) -> String? {
+        guard let shortcut = KeyboardShortcuts.getShortcut(for: name) else { return nil }
+        return shortcut.description
     }
 
     private func openURL(_ string: String) {

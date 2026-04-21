@@ -29,6 +29,26 @@ struct AppSettingsTests {
         #expect(settings.playShutterSound == true)
     }
 
+    @Test("Menu bar icon is shown by default")
+    func defaultShowMenuBarIcon() {
+        let suite = "test.showMenuBarIcon.default"
+        let defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
+        let settings = AppSettings(defaults: defaults)
+        #expect(settings.showMenuBarIcon == true)
+    }
+
+    @Test("Hiding the menu bar icon persists across instances")
+    func showMenuBarIconPersists() {
+        let suite = "test.showMenuBarIcon.persists"
+        let defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
+        let first = AppSettings(defaults: defaults)
+        first.showMenuBarIcon = false
+        let second = AppSettings(defaults: defaults)
+        #expect(second.showMenuBarIcon == false)
+    }
+
     @Test("Default auto-close interval is 5 seconds")
     func defaultAutoCloseInterval() {
         let settings = AppSettings()

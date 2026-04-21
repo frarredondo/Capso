@@ -3,6 +3,11 @@ import AppKit
 import SharedKit
 import KeyboardShortcuts
 
+extension Notification.Name {
+    /// Posted when `AppSettings.showMenuBarIcon` changes so the menu bar can show/hide live.
+    static let menuBarVisibilityChanged = Notification.Name("menuBarVisibilityChanged")
+}
+
 @MainActor
 final class MenuBarController: NSObject {
     private var statusItem: NSStatusItem?
@@ -21,7 +26,33 @@ final class MenuBarController: NSObject {
         self.historyCoordinator = historyCoordinator
         self.onShowPreferences = onShowPreferences
         super.init()
-        setupStatusItem()
+        applyVisibility()
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleVisibilityChange),
+            name: .menuBarVisibilityChanged,
+            object: nil
+        )
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    @objc private func handleVisibilityChange() {
+        applyVisibility()
+    }
+
+    /// Installs or removes the status item based on `settings.showMenuBarIcon`.
+    private func applyVisibility() {
+        if settings.showMenuBarIcon {
+            guard statusItem == nil else { return }
+            setupStatusItem()
+        } else {
+            guard let item = statusItem else { return }
+            NSStatusBar.system.removeStatusItem(item)
+            statusItem = nil
+        }
     }
 
     private func setupStatusItem() {

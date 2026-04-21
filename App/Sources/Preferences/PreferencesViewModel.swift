@@ -33,6 +33,7 @@ final class PreferencesViewModel {
             withMutation(keyPath: \.showMenuBarIcon) {
                 settings.showMenuBarIcon = newValue
             }
+            NotificationCenter.default.post(name: .menuBarVisibilityChanged, object: nil)
         }
     }
 
